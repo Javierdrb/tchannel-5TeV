@@ -4,7 +4,6 @@ from datetime import datetime
 from multiprocessing import Pool, Manager
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-#tryin one thning
 
 def Draw(plt, var, level, channel, outname, verbose=False):
   categories =  {'level':level, 'channel':channel}
