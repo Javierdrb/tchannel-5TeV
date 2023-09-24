@@ -4,7 +4,7 @@ The main analysis is in `tt5TeV.py`. To run it, use the `run.py` scrip. You need
 
     python analysis/tt5TeV/run.py cafea/json/5TeV/poolphedex/TTPS.json -n 64 -j -o TTPS
 
-To execute all the samples, you can use the script `run5TeV.sh`.
+To execute all the samples, you can use the script `run5TeV_tchannel.sh`.
 
 ## The config script
 
@@ -38,6 +38,8 @@ Example:
 Example:
 
     python analysis/tt5TeV/DrawTTmodAltSamp.py -p histos5TeV/22jan2023/
+
+## UP TO HERE
 
 ## MVA plots
 
