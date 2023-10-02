@@ -774,7 +774,7 @@ class AnalysisProcessor(processor.ProcessorABC):
               cutjets = GetCutJets(cuts, syst, met_pt, njets_var, nbtags_var)  #met_pt en vez de mtw si queremos de verdad estimar qcd con met y no con mtw
               
               
-              cut = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutht)& (cutmlb)  & (cutmet_mtw) # i've added some cuts here
+              cut = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutht)& (cutmlb) # & (cutmet_mtw) # i've added some cuts here
               cut=ak.flatten(cut)
               cut = np.array(cut, dtype=bool)												#main cut
               
@@ -784,7 +784,7 @@ class AnalysisProcessor(processor.ProcessorABC):
 
               #cutsnoMET = [ch] + [lev] + ['METfilters']
               #cutjetsnomet = GetCutJets(cutsnoMET, syst, met_pt, njets_var, nbtags_var, nujets_var)
-              cutnomet = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta)  & (cutht)& (cutmlb)    & (cutmet_mtw)
+              cutnomet = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta)  & (cutht)& (cutmlb)    #& (cutmet_mtw)
               cutnomet=ak.flatten(cutnomet)
               cutnomet = np.array(cutnomet, dtype=bool)										#special cuts for met validations   OJO QUE SE LLAMA MET por consistencia con el resto del codigo pero es mtw
              
