@@ -18,6 +18,8 @@ from cafea.analysis.corrections import GetBTagSF, GetBtagEff, AttachMuonSF, Atta
 from cafea.analysis.selection import *
 from cafea.modules.paths import cafea_path
 
+from scipy.optimize import fsolve
+import sympy as sp
 
 import warnings
 # ignore userwarnings and runtime warnings
@@ -189,10 +191,80 @@ def GetCutJets(cuts, syst, metpt, njets, nbtags, nujets=None):
 
 
 
+def wMassReco_prev(lep_ener,lep_pt,lep_px,lep_py,lep_pz,met_pt,met_px,met_py,mtw): #Assuming pt(vec)=(px,py) and based in https://cms.cern.ch/iCMS/jsp/openfile.jsp?tp=draft&files=AN2015_329_v10.pdf definition
+  y_fixed=-1
+  def equations(vars):
+	  
+	  x,y=vars #x will be mw2, y met_pz 
+	  
+	  eq1 = x - ((lep_ener + np.sqrt(met_pt**2 + y**2))**2 - (lep_px+met_px)**2 - (lep_py+met_py)**2 - (lep_pz+y)**2)
+	  
+	  gamma=(x**2)/2+(lep_px*met_px)+(lep_py*met_py)
+	  term1=gamma**2*y**2/(lep_pt**4)
+	  term2=((lep_ener**2 * met_pt**2) - gamma**2)/(lep_pt**2)
+	  
+	
+	  
+	  if term1-term2<0:
+		  
+		  x_fixed=mtw
+		  y_fixed=1.0
+		  
+		  eq1=0
+		  eq2=0
+		  
+	  else:
+		  y_plus = gamma*y/(lep_pt**2) + np.sqrt(term1 - term2)
+		  y_minus = gamma*y/(lep_pt**2) - np.sqrt(term1 - term2)
+		  
+		  if abs(y_plus)<abs(y_minus):
+			  eq2=y-y_plus
+		  else:
+			  eq2=y-y_minus
+	  
+	  
+	  return np.ravel([eq1,eq2])#,y_fixed
+  
+  print(equations)
+  initial=[80,5]
+  if y_fixed==1.0:
+	  mw2=mtw
+	  met_pz=1.0
+  else:
+	  result=fsolve(equations,initial)
+	  mw2,met_pz=result
 
 
 
+  return mw2,met_pz
 
+
+def wMassReco(lep_ener,lep_pt,lep_px,lep_py,lep_pz,met_pt,met_px,met_py,mtw):
+	
+	#x,y=sp.symbols('x y',complex=True)
+	x, y = sp.symbols('x y')
+
+	eq1 = x - ((lep_ener + sp.sqrt(met_pt**2 + y**2))**2 - (lep_px+met_px)**2 - (lep_py+met_py)**2 - (lep_pz+y)**2)
+	gamma=(x**2)/2+(lep_px*met_px)+(lep_py*met_py)
+	term1=gamma**2*y**2/(lep_pt**4)
+	term2=((lep_ener**2 * met_pt**2) - gamma**2)/(lep_pt**2)
+	eq2=y-gamma*y/(lep_pt**2) #+ sp.sqrt(term1 - term2)  #aqui esta la ambiguedad
+	
+	eq22=y-((x**2)/2+(lep_px*met_px)+(lep_py*met_py))*y/(lep_pt**2) #+ sp.sqrt((((x**2)/2+(lep_px*met_px)+(lep_py*met_py))**2*y**2/(lep_pt**4)) - (((lep_ener**2 * met_pt**2) - ((x**2)/2+(lep_px*met_px)+(lep_py*met_py))**2)/(lep_pt**2)))
+	print('eq1:',*eq1,'\n eq22',eq22)
+	print('bye')
+	solutions = sp.nsolve([eq1, eq22], (x, y),(80,1))
+	print(solutions,len(solutions),solutions[0],solutions[1])
+	
+	for solution in solutions:
+		if solution==[]:
+			mw2=mtw
+			met_pz=1.0
+		else:
+			mw2=solution[0].evalf()
+			met_pz=solution[1].evalf()
+		
+	return mw2,met_pz
 
 
 
@@ -731,6 +803,10 @@ class AnalysisProcessor(processor.ProcessorABC):
               
              
               lep_pt=getattr(eval(var),'pt')
+              lep_px=getattr(eval(var),'px')
+              lep_py=getattr(eval(var),'py')
+              lep_pz=getattr(eval(var),'pz')
+              lep_energy=getattr(eval(var),'energy')
               lep_phi=getattr(eval(var),'phi')
               ht_atlas=ht_var+lep_pt+met_pt
               
@@ -742,6 +818,13 @@ class AnalysisProcessor(processor.ProcessorABC):
               
               mtw=ak.fill_none(mtw,False)
               mtw = ak.to_numpy(ak.flatten(mtw))
+              
+              
+            #  mtw2=np.sqrt(((lep_pt+met_pt)**2)-((lep_px+met.px)**2)-((lep_py+met.py)**2))  #mtw as defined for cms paper (son equivalentes)
+            #  mtw2=ak.fill_none(mtw2,False)
+            #  mtw2=ak.to_numpy(ak.flatten(mtw2))
+              
+
             
               
               cutmtwl=mtw>50
@@ -778,13 +861,15 @@ class AnalysisProcessor(processor.ProcessorABC):
               cutjets = GetCutJets(cuts, syst, met_pt, njets_var, nbtags_var)  #met_pt en vez de mtw si queremos de verdad estimar qcd con met y no con mtw
               
               
-              cut = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutht)& (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
-              cut=ak.flatten(cut)
+              cut = (cutsel) & (cutjets) & (cutmtw) #(cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutht)& (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
+             
+              
+              #cut=ak.flatten(cut)
               cut = np.array(cut, dtype=bool)												#main cut
               
               
-              cut_noht = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
-              cut_noht = np.array(cut_noht, dtype=bool)
+              #cut_noht = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
+              #cut_noht = np.array(cut_noht, dtype=bool)
               #cut_noht = np.array(cut_noht, dtype=bool)												#main cut
               #cut1 = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutmet_mtw) & (cutht)#& (cutmlb)#i've added some cuts here
               #cut1=ak.flatten(cut1)
@@ -792,8 +877,8 @@ class AnalysisProcessor(processor.ProcessorABC):
 
               #cutsnoMET = [ch] + [lev] + ['METfilters']
               #cutjetsnomet = GetCutJets(cutsnoMET, syst, met_pt, njets_var, nbtags_var, nujets_var)
-              cutnomet = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta)  & (cutht)& (cutmlb) #   & (cutmet_mtw)
-              cutnomet=ak.flatten(cutnomet)
+              cutnomet = (cutsel) & (cutjets) #& (cutbeta) & (cutueta) & (cutdeltaeta)  & (cutht)& (cutmlb) #   & (cutmet_mtw)
+              #cutnomet=ak.flatten(cutnomet)
               cutnomet = np.array(cutnomet, dtype=bool)										#special cuts for met validations   OJO QUE SE LLAMA MET por consistencia con el resto del codigo pero es mtw
              
               weights = weights_dict[ch if not 'fake' in ch else ch[0]].weight(syst if not syst in (['norm']+systJets) else None)
@@ -801,12 +886,36 @@ class AnalysisProcessor(processor.ProcessorABC):
               
               #
               flat_ht_atlas = ak.to_numpy(ak.flatten(ht_atlas[cut]))
-              flat_ht_atlas_nocut = ak.to_numpy(ak.flatten(ht_atlas[cut_noht]))
+              #flat_ht_atlas_nocut = ak.to_numpy(ak.flatten(ht_atlas[cut_noht]))
               #flat_mtw = ak.to_numpy(ak.flatten(mtw[cut]))
               #print('channel',ch,'\n mlb',*mlb[cut1],'\n corte mlb',*cut[cut1])
               #print('fake pt',fake_pt[cutsel],'\n cutsel',cutsel)
-              print('channel',ch,'level',lev,'\n lep_pt',*lep_pt[cut])
+              #print('level',lev,'\n lep_pt',lep_pt[cut])
+              print('channel',ch)
+              print('mtw',*mtw[cut])
+              print(cut)
+              mw2=np.array([])
+              met_pz=np.array([])
+              for i in range(np.sum(cut)):
+                lep_energy_val=lep_energy[cut][i]
+                lep_pt_val=lep_pt[cut][i]
+                lep_px_val=lep_px[cut][i]
+                lep_py_val=lep_py[cut][i]
+                lep_pz_val=lep_pz[cut][i]
+                met_pt_val=met_pt[cut][i]
+                met_px_val=met.px[cut][i]
+                met_py_val=met.py[cut][i]
+                mtw_val=mtw[cut][i]
+                print('tipos',type(lep_energy_val),type(lep_pt_val),type(lep_px_val))
+                print('cascara')
+                
+                mw2_val,met_pz_val=wMassReco(lep_energy_val,lep_pt_val,lep_px_val,lep_py_val,lep_pz_val,met_pt_val,met_px_val,met_py_val,mtw_val)
+                mw2=np.append(mw2,mw2_val)
+                met_pz=np.append(met_pz,met_pz_val)
+                print('mw2',*mw2,'\n met_pz',*met_pz)
+                            
               
+             
               #print('channel',ch,'\n nelec:',ak.num(e_sel)[cutsel],'\n n muon:',ak.num(m_sel)[cutsel],'\n mtw',mtw[cutsel],'\n lep_pt:',lep_pt[cutsel],'\n fake_pt:',fake_pt[cutsel],'\n mtw_fake',mtw_fake[cutsel],'\n corte',cut[cutsel],'\n corte en fakes',cut[cutsel])
               #print('channel:',ch,'\n nelec:',ak.num(e_sel)[cutsel],'\n elec id:',*e0.pdgId[cutsel],'\n nmuon:',ak.num(m_sel)[cutsel],'\n m id',*m0.pdgId[cutsel])
               #print('hola',*(ak.num(m_sel) == 0),*(e_sel.pdgId>0),type(ak.num(m_sel)==0),type(e_sel.pdgId>0))

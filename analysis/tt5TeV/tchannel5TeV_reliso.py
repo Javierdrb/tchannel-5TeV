@@ -131,6 +131,11 @@ def GetCutJets(cuts, syst, metpt, njets, nbtags, nujets=None):
   jetcat = np.ones_like(metpt, dtype=bool)
   metcat = np.ones_like(metpt, dtype=bool)
 
+  if 'metg30' in cuts:
+    metcat = (metpt > 30)
+  if 'metl30' in cuts:
+    metcat = (metpt < 30)
+
   if 'metg40' in cuts:
     metcat = (metpt > 40)
   if 'metl40' in cuts:
@@ -773,29 +778,41 @@ class AnalysisProcessor(processor.ProcessorABC):
               
                             
 ########################################################################################################                   Up to here the cut thing
-              
-              cuts      = [ch] + [lev] + ['metg30'] + ['METfilters']
-              cutjets = GetCutJets(cuts, syst, met_pt, njets_var, nbtags_var)  #met_pt en vez de mtw si queremos de verdad estimar qcd con met y no con mtw
-              
-              
-              cut = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutht)& (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
-              cut=ak.flatten(cut)
-              cut = np.array(cut, dtype=bool)												#main cut
-              
-              
-              cut_noht = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
-              cut_noht = np.array(cut_noht, dtype=bool)
-              #cut_noht = np.array(cut_noht, dtype=bool)												#main cut
-              #cut1 = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutmet_mtw) & (cutht)#& (cutmlb)#i've added some cuts here
-              #cut1=ak.flatten(cut1)
-              #cut1 = np.array(cut1, dtype=bool)	              
+              if ch in ['e', 'm']:
+                cuts      = [ch] + [lev] + ['metg30'] + ['METfilters']
+                cutjets = GetCutJets(cuts, syst, met_pt, njets_var, nbtags_var)  #met_pt en vez de mtw si queremos de verdad estimar qcd con met y no con mtw  
+                cut = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutht)& (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
+                cut=ak.flatten(cut)  
+                cut = np.array(cut, dtype=bool) #main cut
+                
+                cut_noht = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta) & (cutmtw) & (cutmlb)  #& (cutmet_mtw) # i've added some cuts here
+                cut_noht = np.array(cut_noht, dtype=bool)
+                #cut_noht = np.array(cut_noht, dtype=bool)												#main cut
+                
+                #cutsnoMET = [ch] + [lev] + ['METfilters']
+                #cutjetsnomet = GetCutJets(cutsnoMET, syst, met_pt, njets_var, nbtags_var, nujets_var)
+                
+                cutnomet = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta)  & (cutht)& (cutmlb) #   & (cutmet_mtw)
+                cutnomet=ak.flatten(cutnomet)
+                cutnomet = np.array(cutnomet, dtype=bool)										#special cuts for met validations   OJO QUE SE LLAMA MET por consistencia con el resto del codigo pero es mtw
 
-              #cutsnoMET = [ch] + [lev] + ['METfilters']
-              #cutjetsnomet = GetCutJets(cutsnoMET, syst, met_pt, njets_var, nbtags_var, nujets_var)
-              cutnomet = (cutsel) & (cutjets) & (cutbeta) & (cutueta) & (cutdeltaeta)  & (cutht)& (cutmlb) #   & (cutmet_mtw)
-              cutnomet=ak.flatten(cutnomet)
-              cutnomet = np.array(cutnomet, dtype=bool)										#special cuts for met validations   OJO QUE SE LLAMA MET por consistencia con el resto del codigo pero es mtw
-             
+				  
+				  
+              else:  #relaxing the non-iso selection to have more statistics for calculating QCD properly
+                cuts      = [ch] + [lev]+ ['metg30'] + ['METfilters']
+                cutjets = GetCutJets(cuts, syst, met_pt, njets_var, nbtags_var)  #met_pt en vez de mtw si queremos de verdad estimar qcd con met y no con mtw  
+                cut = (cutsel) & (cutjets) & (cutbeta) & (cutueta)& (cutmtw) #& (cutmet_mtw) # i've added some cuts here
+                #cut=ak.flatten(cut)  
+                cut = np.array(cut, dtype=bool) #main cut
+                
+                
+                
+                
+                cutnomet = (cutsel) & (cutjets) & (cutbeta) & (cutueta)  #   & (cutmet_mtw)
+                #cutnomet=ak.flatten(cutnomet)
+                cutnomet = np.array(cutnomet, dtype=bool)										#special cuts for met validations   OJO QUE SE LLAMA MET por consistencia con el resto del codigo pero es mtw				 
+              
+              
               weights = weights_dict[ch if not 'fake' in ch else ch[0]].weight(syst if not syst in (['norm']+systJets) else None)
               
               
@@ -805,8 +822,8 @@ class AnalysisProcessor(processor.ProcessorABC):
               #flat_mtw = ak.to_numpy(ak.flatten(mtw[cut]))
               #print('channel',ch,'\n mlb',*mlb[cut1],'\n corte mlb',*cut[cut1])
               #print('fake pt',fake_pt[cutsel],'\n cutsel',cutsel)
-              print('channel',ch,'level',lev,'\n lep_pt',*lep_pt[cut])
-              
+              #print('channel',ch,'level',lev,'\n lep_pt',*lep_pt[cut])
+              #print('vaines')
               #print('channel',ch,'\n nelec:',ak.num(e_sel)[cutsel],'\n n muon:',ak.num(m_sel)[cutsel],'\n mtw',mtw[cutsel],'\n lep_pt:',lep_pt[cutsel],'\n fake_pt:',fake_pt[cutsel],'\n mtw_fake',mtw_fake[cutsel],'\n corte',cut[cutsel],'\n corte en fakes',cut[cutsel])
               #print('channel:',ch,'\n nelec:',ak.num(e_sel)[cutsel],'\n elec id:',*e0.pdgId[cutsel],'\n nmuon:',ak.num(m_sel)[cutsel],'\n m id',*m0.pdgId[cutsel])
               #print('hola',*(ak.num(m_sel) == 0),*(e_sel.pdgId>0),type(ak.num(m_sel)==0),type(e_sel.pdgId>0))
