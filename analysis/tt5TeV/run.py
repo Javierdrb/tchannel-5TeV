@@ -22,12 +22,6 @@ from cafea.modules import fileReader
 
 
 
-import linecache2
-
-if "#" in linecache2.getline(__file__,17).strip():
-	print("We are doing tchannel \n")
-else:
-	print("We are doing ttbar \n")
 
 
 
@@ -186,8 +180,8 @@ if __name__ == '__main__':
       model = pickle.load(f)
   elif pathModels is not None and isinstance(pathModels, str):
     pathModels = pathModels.replace(' ', '').split(',')
-  if isinstance(pathModels, list):
-    model = [pkl.load(open(p, 'rb')) for p in pathModels]
+  #if isinstance(pathModels, list):
+    #model = [pkl.load(open(p, 'rb')) for p in pathModels]
   processor_instance = tchannel5TeV.AnalysisProcessor(samplesdict, model)  #donde pone tchannel5TeV poner tt5TeV para ttbar
 
 
