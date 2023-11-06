@@ -18,6 +18,7 @@ from cafea.analysis.corrections import GetBTagSF, GetBtagEff, AttachMuonSF, Atta
 from cafea.analysis.selection import *
 from cafea.modules.paths import cafea_path
 
+from analysis.tt5TeV.w_reco_for import reco
 
 import warnings
 # ignore userwarnings and runtime warnings
@@ -194,17 +195,24 @@ def GetCutJets(cuts, syst, metpt, njets, nbtags, nujets=None):
 
 
 
+class EventCollection:
+    def __init__(self, lorentz_vectors):
+        self.lorentz_vectors = lorentz_vectors
+        
+    def M(self):
+        return np.array([lv.M() for lv in self.lorentz_vectors])
 
+    def Px(self):
+        return np.array([lv.Px() for lv in self.lorentz_vectors])
+        
+    def Py(self):
+        return np.array([lv.Py() for lv in self.lorentz_vectors])
+        
+    def Pz(self):
+        return np.array([lv.Pz() for lv in self.lorentz_vectors])
 
-
-
-
-
-
-
-
-
-
+    def E(self):
+        return np.array([lv.E() for lv in self.lorentz_vectors])   
 
 
 
@@ -288,6 +296,9 @@ class AnalysisProcessor(processor.ProcessorABC):
         'mtw'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("mtw",      "m$_{T}^{W}$ (GeV)", 6, 0, 120)),
         'met_mtw'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("met_mtw",      "E$_{T}^{miss}+$m$_{T}^{W}$ (GeV)", 6, 70, 200)),
         'mlb'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("mlb",      "m$_{\ell b}$ (GeV)", 10, 0, 180)),
+        'beta'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("beta",      "B-jet $\eta$ ", 8, -2.5, 2.50)),
+        'deltaeta'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("deltaeta",      "Jets $\Delta \eta$ ", 8, 0, 2.50)),
+        'topmass'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("topmass",      " $M_{top}$ ", 15, 100, 250)),        
 
         'mtwnocut'   : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("mtwnocut",     "m$_{T}^{W}$ (GeV)", 6, 0, 120)),
         'ht_atlas_nocut'         : hist.Hist("Events", hist.Cat("sample", "sample"), hist.Cat("channel", "channel"), hist.Cat("level", "level"), hist.Cat('syst', 'syst'), hist.Bin("ht_atlas_nocut",      "H$_{T}$ ATLAS (GeV)", 10, 0, 340)),
@@ -812,7 +823,32 @@ class AnalysisProcessor(processor.ProcessorABC):
                 #cutnomet=ak.flatten(cutnomet)
                 cutnomet = np.array(cutnomet, dtype=bool)										#special cuts for met validations   OJO QUE SE LLAMA MET por consistencia con el resto del codigo pero es mtw				 
               
+#####################################       Time to do the W-boson recosntruction (not to raise problems in the minimization first we have to apply the cut) 		###################################
               
+              w=[None]*np.sum(cut)
+              
+              
+              if ch in ['e','m']:
+                for i in range(np.sum(cut)):				  
+                  w[i]=reco(lsel0[cut][i],met[cut][i],plot=False,plotpath='here/',n=0) 
+              else:      				  
+                for i in range(np.sum(cut)):				  
+                  w[i]=reco(lfake0[cut][i],met[cut][i],plot=False,plotpath='here/',n=0) 
+
+              
+              w_candidates= EventCollection(w)
+           
+              # Calculate the masses for all events
+              w_masses = w_candidates.M()
+              
+              invariant_masses = np.sqrt((w_candidates.E() + b0[cut].energy)**2 - (w_candidates.Px() + b0[cut].px)**2 - (w_candidates.Py() + b0[cut].py)**2 - (w_candidates.Pz() + b0[cut].pz)**2)
+
+              invariant_masses=ak.flatten(invariant_masses)
+
+######################################  Redefine cuts from here if wanting to add something on the w-top system ##############################################################
+
+
+             
               weights = weights_dict[ch if not 'fake' in ch else ch[0]].weight(syst if not syst in (['norm']+systJets) else None)
               
               
@@ -927,6 +963,10 @@ class AnalysisProcessor(processor.ProcessorABC):
               hout['mtw'].fill(sample=histAxisName, channel=ch, level=lev, mtw=mtw[cut], syst=syst, weight=weights) #aqui tenia flat_mtw como def en 795
               hout['met_mtw'].fill(sample=histAxisName, channel=ch, level=lev, met_mtw=met.pt[cut]+mtw[cut], syst=syst, weight=weights) #aqui tenia flat_mtw
               hout['mlb'].fill(sample=histAxisName, channel=ch, level=lev, mlb=mlb[cut], syst=syst, weight=weights)
+              hout['u0eta'].fill(sample=histAxisName, channel=ch, level=lev, u0eta=u0eta[cut], syst=syst, weight=weights)
+              hout['beta'].fill(sample=histAxisName, channel=ch, level=lev, beta=b0eta[cut], syst=syst, weight=weights)
+              hout['deltaeta'].fill(sample=histAxisName, channel=ch, level=lev, deltaeta=abs(b0eta-u0eta)[cut], syst=syst, weight=weights)              
+              hout['topmass'].fill(sample=histAxisName, channel=ch, level=lev, topmass=invariant_masses, syst=syst, weight=weights)                  
 ###
 
 
