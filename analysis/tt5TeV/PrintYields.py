@@ -8,13 +8,15 @@ fname = path + '/masterhistos/'
 pmaster = plotter(fname, prDic={},  bkgList=bkglist, colors=colordic, lumi=lumi, var='master')
 h = pmaster.GetHistogram('master')
 
-
+#fname = path + 'Control_Plots/'
+#pmaster = plotter(fname, prDic={},  bkgList=bkglist, colors=colordic, lumi=lumi, var='eeta')
+#h = pmaster.GetHistogram('eeta')
 
 dyields = {}
 process = ['tt', 'tW', 'tchan', 'DY', 'WJets', 'QCD', 'data']
 bkg = ['tt', 'tW', 'tchan', 'DY', 'WJets', 'QCD']
-categories = ['e+3j1b', 'e+4j1b', 'e+$\geq5$j1b', 'e+3j$\geq2$b', 'e+4j$\geq2$b', 'e+$\geq5$j$\geq2$b', '$\mu+3$j1b', '$\mu+4$j1b', '$\mu+\geq5$j1b', '$\mu+3$j$\geq2$b', '$\mu+4$j$\geq2$b', '$\mu+\geq5$j$\geq2$b']
-categoriesl = ['$\ell+3$j1b', '$\ell+4$j1b', '$\ell+\geq5$j1b', '$\ell+3$j$\geq2$b', '$\ell+4$j$\geq2$b', '$\ell+\geq5$j$\geq2$b']
+categories = ['e+2j1b','$\mu+2$j1b']#['e+3j1b', 'e+4j1b', 'e+$\geq5$j1b', 'e+3j$\geq2$b', 'e+4j$\geq2$b', 'e+$\geq5$j$\geq2$b', '$\mu+3$j1b', '$\mu+4$j1b', '$\mu+\geq5$j1b', '$\mu+3$j$\geq2$b', '$\mu+4$j$\geq2$b', '$\mu+\geq5$j$\geq2$b']
+categoriesl = ['$\ell+2$j1b']#['$\ell+3$j1b', '$\ell+4$j1b', '$\ell+\geq5$j1b', '$\ell+3$j$\geq2$b', '$\ell+4$j$\geq2$b', '$\ell+\geq5$j$\geq2$b']
 for pr in process:
     vals = h.integrate('process', pr).integrate('syst', 'norm').values(overflow='all')[()]
     vals = vals[:-1]
@@ -27,11 +29,11 @@ dyields['total'] = dyields['tt'] + dyields['tW'] + dyields['tchan'] + dyields['D
 
 lyields = {}
 for pr in process + ['total']:
-    lyields[pr] = dyields[pr][0:6] + dyields[pr][6:]
+    lyields[pr] = dyields[pr][0] + dyields[pr][1]
     print(pr, lyields[pr])
 #datatoday="12apr23/"
 output = './'
-outpath = baseweb + datatoday
+outpath = './'
 print('Writing to', outpath)
 
 

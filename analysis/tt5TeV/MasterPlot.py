@@ -11,13 +11,14 @@ import matplotlib
 
 channels = ['e', 'm']
 #levels = ['3j1b', '3j2b', '4j1b', '4j2b', 'g5j1b', 'g5j2b']
-levels = ['3j1b', '4j1b', 'g5j1b', '3j2b', '4j2b', 'g5j2b']
+levels = ['2j1b']#['3j1b', '4j1b', 'g5j1b', '3j2b', '4j2b', 'g5j2b']
 var = "counts"
 outname = 'master'
 
 colorchan = 'blue'
 #datatoday='12apr23'
 outpath = path + 'masterhistos/'
+
 #baseweb='/nfs/fanae/user/jriego/www/public/tt5TeV/master'
 print(baseweb)
 
@@ -123,7 +124,7 @@ def CreateHistos(plt, systematics, process, channels, levels):
 
 def DrawMasterHistogram(fname):
     ''' Drwa the master histogram '''
-    outpath = baseweb+datatoday+'/'
+    #outpath = baseweb+datatoday+'/'
     if not os.path.exists(outpath):
         os.makedirs(outpath)
     outname = 'master'
